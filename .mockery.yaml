@@ -1,0 +1,15 @@
+---
+all: true
+filename: "zz_generated.{{ .InterfaceName }}.go"
+recursive: false
+
+template: testify
+template-data:
+  boilerplate-file: ./hack/boilerplate.go.txt
+# with-expecter: true
+
+packages:
+  github.com/alexandremahdhaoui/ebpfstruct:
+    config:
+      dir: pkg/mockebpfstruct
+      pkgname: mockebpfstruct
