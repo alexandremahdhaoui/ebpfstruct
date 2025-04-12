@@ -37,7 +37,11 @@ type Array[T any] struct {
 // Set implements Array.
 func (a *Array[T]) Set(values []T) error {
 	a.setPassive(values)
-	return a.checkExpectation("Set")
+	if err := a.checkExpectation("Set"); err != nil {
+		return err
+	}
+	a.switchover()
+	return nil
 }
 
 // SetAndDeferSwitchover implements Array.

@@ -30,6 +30,9 @@ type Variable[T any] struct {
 
 // Set implements ebpfstruct.Variable.
 func (v *Variable[T]) Set(newVar T) error {
+	if err := v.checkExpectation("Set"); err != nil {
+		return err
+	}
 	v.V = newVar
-	return v.checkExpectation("Set")
+	return nil
 }

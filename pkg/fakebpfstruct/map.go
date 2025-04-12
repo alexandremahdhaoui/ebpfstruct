@@ -38,27 +38,36 @@ type Map[K comparable, V any] struct {
 
 // BatchDelete removes keys in batch from the active map.
 func (m *Map[K, V]) BatchDelete(keys []K) error {
+	if err := m.checkExpectation("BatchDelete"); err != nil {
+		return err
+	}
 	activeMap := m.GetActiveMap()
 	for _, k := range keys {
 		delete(activeMap, k)
 	}
-	return m.checkExpectation("BatchDelete")
+	return nil
 }
 
 // BatchUpdate implements Map.
 func (m *Map[K, V]) BatchUpdate(kv map[K]V) error {
+	if err := m.checkExpectation("BatchUpdate"); err != nil {
+		return err
+	}
 	activeMap := m.GetActiveMap()
 	for k, v := range kv {
 		activeMap[k] = v
 	}
-	return m.checkExpectation("BatchUpdate")
+	return nil
 }
 
 // Set implements Map.
 func (m *Map[K, V]) Set(newMap map[K]V) error {
 	m.setPassiveMap(newMap)
+	if err := m.checkExpectation("Set"); err != nil {
+		return err
+	}
 	m.switchover()
-	return m.checkExpectation("Set")
+	return nil
 }
 
 // SetAndDeferSwitchover implements Map.
