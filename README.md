@@ -1,11 +1,11 @@
 # ebpfstruct
 
 Useful data structure for eBPF programming in Go. They conviniently wrap ebpf data structures
-in a safe-thread manner.
+in a thread-safe manner.
 
 These data structures offering an abstract interface simplifies testing components.
 
-## Getting started `ebpfstruct`
+## Getting started
 
 To get started using `ebpfstruct` please follow the 3 step presented below:
 
@@ -15,7 +15,7 @@ To get started using `ebpfstruct` please follow the 3 step presented below:
 go get github.com/alexandremahdhaoui/ebpfstruct
 ```
 
-### 2. Import `ebpfstruct`
+### 2. Import
 
 ```go
 package your_package
@@ -24,7 +24,7 @@ import "github.com/alexandremahdhaoui/ebpfstruct"
 
 func yourFunc() {
     // [...]
-    arr := ebpfstruct.NewArray(
+    arr := ebpfstruct.NewArray[any](
 	    a, b,
 	    aLen, bLen,
 	    activePointer,
