@@ -21,15 +21,17 @@ var _ ebpfstruct.FIFO[any] = &FIFO[any]{}
 
 func NewFIFO[T any]() *FIFO[T] {
 	return &FIFO[T]{
-		Chan: make(chan T),
+		Chan:     make(chan T),
+		expector: expector{},
 	}
 }
 
 type FIFO[T any] struct {
 	Chan chan T
+	expector
 }
 
 // Subscribe implements FIFO.
 func (f *FIFO[T]) Subscribe() (<-chan T, error) {
-	return f.Chan, nil
+	return f.Chan, f.checkExpectation("Subscribe")
 }

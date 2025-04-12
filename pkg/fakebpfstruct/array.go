@@ -34,6 +34,21 @@ type Array[T any] struct {
 	expector
 }
 
+// Set implements Array.
+func (a *Array[T]) Set(values []T) error {
+	a.setPassive(values)
+	return a.checkExpectation("Set")
+}
+
+// SetAndDeferSwitchover implements Array.
+func (a *Array[T]) SetAndDeferSwitchover(values []T) (func(), error) {
+	a.setPassive(values)
+	return a.switchover, a.checkExpectation("SetAndDeferSwitchover")
+}
+
+// -- GET ACTIVE
+
+// It returns the actual state of the array in active state.
 func (a *Array[T]) GetActiveArray() []T {
 	if a.activePtr {
 		return a.b
@@ -41,17 +56,7 @@ func (a *Array[T]) GetActiveArray() []T {
 	return a.a
 }
 
-// Set implements Array.
-func (a *Array[T]) Set(values []T) error {
-	a.setPassive(values)
-	return nil
-}
-
-// SetAndDeferSwitchover implements Array.
-func (a *Array[T]) SetAndDeferSwitchover(values []T) (func(), error) {
-	a.setPassive(values)
-	return a.switchover, nil
-}
+// -- HELPERS
 
 func (a *Array[T]) setPassive(values []T) {
 	if a.activePtr {

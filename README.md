@@ -188,7 +188,7 @@ func main() {
 
 ## Interfaces
 
-[//] # TODO: generate interfaces from code.
+[//] # TODO: generate interfaces list from code.
 
 ## Fakes
 
@@ -203,22 +203,53 @@ import (
 ) 
 
 func TestSomething(t *testing.T) {
-    // ...
+    // [...]
+
     expectedArrayInternalValue := [0, 1, 2, 3]
     arr := fakebpfstruct.NewArray[T]()
     arr.
         ORDERED().
-        EXPECT("Set", errors.New("a random error to see if your component handles unexpected errors"), 1).
+        EXPECT("Set", errors.New("a random error to see if your component handles unexpected errors")).
         EXPECT(
             "SetAndDeferSwitchover", // expected method
             nil,                     // if the method returns an error, it will return this value.
-            1,                       // the number of times it is expected.
         )
+
     yourComponent := NewComponentDependingOnArray(arr)
+
     err := yourComponent.RunWithRetry(expectedArrayInternalValue)
     assert.NoError(t, err)
     assert.Equal(t, arr.Array, expectedArrayInternalValue)
-    // ...
+
+    // [...]
+}
+```
+
+## Disable expector with fakes
+
+Please note that the `expector` can be disabled by calling the `DISABLE_EXPECTOR()` method.
+
+```go
+package your_test
+
+import (
+    "github.com/alexandremahdhaoui/ebpfstruct/pkg/fakebpfstruct"
+) 
+
+func TestSomething(t *testing.T) {
+    // [...]
+
+    expectedArrayInternalValue := [0, 1, 2, 3]
+    arr := fakebpfstruct.NewArray[T]()
+    arr.DISABLE_EXPECTOR() // <-- Disables the expector.
+
+    yourComponent := NewComponentDependingOnArray(arr)
+
+    err := yourComponent.RunWithRetry(expectedArrayInternalValue)
+    assert.NoError(t, err)
+    assert.Equal(t, arr.Array, expectedArrayInternalValue)
+
+    // [...]
 }
 ```
 

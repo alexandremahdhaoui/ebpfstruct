@@ -15,6 +15,21 @@
  */
 package fakebpfstruct
 
-// TODO: implement expector
+import "github.com/alexandremahdhaoui/ebpfstruct"
 
-// var _ Variable[any]    = &Variable[any]{}
+var _ ebpfstruct.Variable[any] = &Variable[any]{}
+
+func NewVariable[T any]() *Variable[T] {
+	return new(Variable[T])
+}
+
+type Variable[T any] struct {
+	V T
+	expector
+}
+
+// Set implements ebpfstruct.Variable.
+func (v *Variable[T]) Set(newVar T) error {
+	v.V = newVar
+	return v.checkExpectation("Set")
+}

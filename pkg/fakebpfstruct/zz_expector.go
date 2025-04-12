@@ -23,9 +23,14 @@ type expectation struct {
 }
 
 type expector struct {
-	ordered bool
-	eList   []expectation
-	eMap    map[string]error
+	disabled bool
+	ordered  bool
+	eList    []expectation
+	eMap     map[string]error
+}
+
+func (e *expector) DISABLE_EXPECTOR() {
+	e.disabled = true
 }
 
 func (e *expector) EXPECT(method string, err error) *expector {
@@ -51,6 +56,10 @@ func (e *expector) addExpectation(method string, err error) {
 }
 
 func (e *expector) checkExpectation(method string) error {
+	if e.disabled { // skip if disabled
+		return nil
+	}
+
 	if e.ordered {
 		if len(e.eList) == 0 {
 			panic("unexpected method call")

@@ -21,59 +21,72 @@ import (
 
 var _ ebpfstruct.Map[uint32, any] = &Map[uint32, any]{}
 
-// -------------------------------------------------------------------
-// -- FAKE MAP
-// -------------------------------------------------------------------
+func NewMap[K comparable, V any]() *Map[K, V] {
+	return &Map[K, V]{
+		a:         make(map[K]V),
+		b:         make(map[K]V),
+		activePtr: false,
+		expector:  expector{},
+	}
+}
 
 type Map[K comparable, V any] struct {
-	Map map[K]V
+	a, b      map[K]V
+	activePtr bool
 	expector
 }
 
-// BatchDelete implements Map.
-func (f *Map[K, V]) BatchDelete(keys []K) error {
-	// ----------------------
-	// MOVE BELOW TO EXPECTOR
-	//
-	if len(f.expectationList) == 0 {
-		panic("did not expect call to Map.BatchDelete")
-	}
-	if f.expectationList[0].Method != "BatchDelete" {
-		panic("did not expect call to Map.BatchDelete")
-	}
-	if len(f.expectationList) > 1 {
-		f.expectationList = f.expectationList[1:]
-	}
-	if err := f.expectationList[0].Err; err != nil {
-		return err
-	}
-	//
-	// MOVE ABOVE TO EXPECTOR
-	// ----------------------
-
+// BatchDelete removes keys in batch from the active map.
+func (m *Map[K, V]) BatchDelete(keys []K) error {
+	activeMap := m.GetActiveMap()
 	for _, k := range keys {
-		delete(f.Map, k)
+		delete(activeMap, k)
 	}
-	return nil
+	return m.checkExpectation("BatchDelete")
 }
 
 // BatchUpdate implements Map.
-func (f *Map[K, V]) BatchUpdate(kv map[K]V) error {
-	panic("unimplemented")
+func (m *Map[K, V]) BatchUpdate(kv map[K]V) error {
+	activeMap := m.GetActiveMap()
+	for k, v := range kv {
+		activeMap[k] = v
+	}
+	return m.checkExpectation("BatchUpdate")
 }
 
 // Set implements Map.
-func (f *Map[K, V]) Set(newMap map[K]V) error {
-	panic("unimplemented")
+func (m *Map[K, V]) Set(newMap map[K]V) error {
+	m.setPassiveMap(newMap)
+	m.switchover()
+	return m.checkExpectation("Set")
 }
 
 // SetAndDeferSwitchover implements Map.
-func (f *Map[K, V]) SetAndDeferSwitchover(newMap map[K]V) (func(), error) {
-	panic("unimplemented")
+func (m *Map[K, V]) SetAndDeferSwitchover(newMap map[K]V) (func(), error) {
+	m.setPassiveMap(newMap)
+	return m.switchover, m.checkExpectation("SetAndDeferSwitchover")
 }
 
-func NewMap[K comparable, V any]() *Map[K, V] {
-	return &Map[K, V]{
-		Map: make(map[K]V),
+// -- GET ACTIVE
+
+// It returns the actual state of the map in active state.
+func (m *Map[K, V]) GetActiveMap() map[K]V {
+	if m.activePtr {
+		return m.a
 	}
+	return m.b
+}
+
+// -- HELPERS
+
+func (m *Map[K, V]) setPassiveMap(newMap map[K]V) {
+	if m.activePtr {
+		m.b = newMap
+	} else {
+		m.a = newMap
+	}
+}
+
+func (m *Map[K, V]) switchover() {
+	m.activePtr = !m.activePtr
 }
