@@ -19,7 +19,7 @@ generate:
 
 # ------------------------------------------------------- FMT -------------------------------------------------------- #
 
-GOFUMPT_VERSION := v0.6.0
+GOFUMPT_VERSION := v0.8.0
 GOFUMPT := go run mvdan.cc/gofumpt@$(GOFUMPT_VERSION)
 
 .PHONY: fmt

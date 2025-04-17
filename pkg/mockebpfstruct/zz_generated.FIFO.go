@@ -50,6 +50,52 @@ func (_m *MockFIFO[T]) EXPECT() *MockFIFO_Expecter[T] {
 	return &MockFIFO_Expecter[T]{mock: &_m.Mock}
 }
 
+// Done provides a mock function for the type MockFIFO
+func (_mock *MockFIFO[T]) Done() <-chan struct{} {
+	ret := _mock.Called()
+
+	if len(ret) == 0 {
+		panic("no return value specified for Done")
+	}
+
+	var r0 <-chan struct{}
+	if returnFunc, ok := ret.Get(0).(func() <-chan struct{}); ok {
+		r0 = returnFunc()
+	} else {
+		if ret.Get(0) != nil {
+			r0 = ret.Get(0).(<-chan struct{})
+		}
+	}
+	return r0
+}
+
+// MockFIFO_Done_Call is a *mock.Call that shadows Run/Return methods with type explicit version for method 'Done'
+type MockFIFO_Done_Call[T any] struct {
+	*mock.Call
+}
+
+// Done is a helper method to define mock.On call
+func (_e *MockFIFO_Expecter[T]) Done() *MockFIFO_Done_Call[T] {
+	return &MockFIFO_Done_Call[T]{Call: _e.mock.On("Done")}
+}
+
+func (_c *MockFIFO_Done_Call[T]) Run(run func()) *MockFIFO_Done_Call[T] {
+	_c.Call.Run(func(args mock.Arguments) {
+		run()
+	})
+	return _c
+}
+
+func (_c *MockFIFO_Done_Call[T]) Return(valCh <-chan struct{}) *MockFIFO_Done_Call[T] {
+	_c.Call.Return(valCh)
+	return _c
+}
+
+func (_c *MockFIFO_Done_Call[T]) RunAndReturn(run func() <-chan struct{}) *MockFIFO_Done_Call[T] {
+	_c.Call.Return(run)
+	return _c
+}
+
 // Subscribe provides a mock function for the type MockFIFO
 func (_mock *MockFIFO[T]) Subscribe() (<-chan T, error) {
 	ret := _mock.Called()

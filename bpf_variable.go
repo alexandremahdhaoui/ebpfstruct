@@ -31,23 +31,36 @@ var ErrCreatingNewVariable = errors.New("creating new variable")
 //   - Set with differable switchover in order to sync switchover
 //     with many bpf data structures.
 type Variable[T any] interface {
+	// Done returns a channel that's closed when work done on behalf of this
+	// interface has been gracefully terminated.
+	Done() <-chan struct{}
+
 	// Set the variable.
 	Set(v T) error
 }
 
-type bpfVariable[T any] struct {
-	obj *ebpf.Variable
-}
-
-// Set implements BPFVariable.
-func (b *bpfVariable[T]) Set(v T) error {
-	return b.obj.Set(v)
-}
-
-func NewVariable[T any](obj *ebpf.Variable) (Variable[T], error) {
+// doneCh is a channel used to notify the bpf data structures or bpf
+// program has been closed and they can no longer be used.
+func NewVariable[T any](obj *ebpf.Variable, doneCh <-chan struct{}) (Variable[T], error) {
 	if obj == nil {
 		return nil, flaterrors.Join(ErrEBPFObjectsMustNotBeNil, ErrCreatingNewVariable)
 	}
 
 	return &bpfVariable[T]{obj: obj}, nil
+}
+
+type bpfVariable[T any] struct {
+	obj *ebpf.Variable
+	// doneCh is a channel used to notify the bpf data structures or bpf
+	// program has been closed and they can no longer be used.
+	doneCh <-chan struct{}
+}
+
+func (bv *bpfVariable[T]) Done() <-chan struct{} {
+	return bv.doneCh
+}
+
+// Set implements BPFVariable.
+func (bv *bpfVariable[T]) Set(v T) error {
+	return bv.obj.Set(v)
 }

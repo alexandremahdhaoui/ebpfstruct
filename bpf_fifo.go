@@ -41,6 +41,15 @@ import (
 // - FIFO is thread-safe.
 // - Subscribe() can be called only once.
 type FIFO[T any] interface {
+	// Done returns a channel that's closed when work done on behalf of this
+	// interface has been gracefully terminated.
+	//
+	// While the channel from Subscribe() could be used to know if the FIFO
+	// interface has been closed, using the channel from this interface is
+	// more idiomatic.
+	Done() <-chan struct{}
+
+	// Subscribe returns a receiver channel of T or an error.
 	Subscribe() (<-chan T, error)
 }
 
@@ -48,21 +57,34 @@ type bpfFifo[T any] struct {
 	rb    *ringbuf.Reader
 	mu    *sync.Mutex
 	inUse bool
+	// doneCh is a channel used to notify the bpf data structures or bpf
+	// program has been closed and they can no longer be used.
+	doneCh <-chan struct{}
 }
 
 // Generics constraints:
 // - T must be a **struct**.
 // - T must not be a pointer.
 // - T must not be an interface.
-func NewFIFO[T any](ringbufMap *ebpf.Map) (FIFO[T], error) {
+//
+// doneCh is a channel used to notify the bpf data structures or bpf
+// program has been closed and they can no longer be used.
+func NewFIFO[T any](ringbufMap *ebpf.Map, doneCh <-chan struct{}) (FIFO[T], error) {
 	rb, err := ringbuf.NewReader(ringbufMap)
 	if err != nil {
 		return nil, err
 	}
 
 	return &bpfFifo[T]{
-		rb: rb,
+		rb:     rb,
+		mu:     &sync.Mutex{},
+		inUse:  false,
+		doneCh: doneCh,
 	}, nil
+}
+
+func (f *bpfFifo[T]) Done() <-chan struct{} {
+	return f.doneCh
 }
 
 var (

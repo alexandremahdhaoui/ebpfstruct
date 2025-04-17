@@ -43,6 +43,10 @@ var (
 
 // Wraps bpf objects with a convenient interface for testing.
 type Array[T any] interface {
+	// Done returns a channel that's closed when work done on behalf of this
+	// interface has been gracefully terminated.
+	Done() <-chan struct{}
+
 	// -- Set all values of the BPF map to the one of the input map.
 	//	  - DELETE all entries in the *ebpf.Map that have index > newLen.
 	//	  - UPDATE_BATCH all entries with index in the interval [0, newLen].
@@ -71,10 +75,13 @@ type Array[T any] interface {
 	SetAndDeferSwitchover(values []T) (func(), error)
 }
 
+// doneCh is a channel used to notify the bpf data structures or bpf
+// program has been closed and they can no longer be used.
 func NewArray[T any](
 	a, b *ebpf.Map,
 	aLen, bLen *ebpf.Variable,
 	activePointer *ebpf.Variable,
+	doneCh <-chan struct{},
 ) (Array[T], error) {
 	if util.AnyPtrIsNil(a, b, aLen, bLen, activePointer) {
 		return nil, flaterrors.Join(ErrEBPFObjectsMustNotBeNil, ErrCreatingNewArray)
@@ -89,6 +96,7 @@ func NewArray[T any](
 		bLen:               bLen,
 		activePointer:      activePointer,
 		activePointerCache: 0,
+		doneCh:             doneCh,
 	}, nil
 }
 
@@ -124,6 +132,14 @@ type bpfArray[T any] struct {
 	// We save a few syscalls by caching `activePointer` value instead of reading
 	// the bpf variable.
 	activePointerCache uint8
+
+	// doneCh is a channel used to notify the bpf data structures or bpf
+	// program has been closed and they can no longer be used.
+	doneCh <-chan struct{}
+}
+
+func (arr *bpfArray[T]) Done() <-chan struct{} {
+	return arr.doneCh
 }
 
 // Set implements BPFMap.

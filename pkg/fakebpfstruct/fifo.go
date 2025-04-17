@@ -23,15 +23,28 @@ func NewFIFO[T any]() *FIFO[T] {
 	return &FIFO[T]{
 		Chan:     make(chan T),
 		expector: expector{},
+		doneCh:   make(chan struct{}),
 	}
 }
 
 type FIFO[T any] struct {
-	Chan chan T
+	Chan   chan T
+	doneCh chan struct{}
 	expector
 }
 
 // Subscribe implements FIFO.
 func (f *FIFO[T]) Subscribe() (<-chan T, error) {
 	return f.Chan, f.checkExpectation("Subscribe")
+}
+
+func (f *FIFO[T]) Done() <-chan struct{} {
+	return f.doneCh
+}
+
+// It will close the channel returned by Done(), notifying when closed
+// that the work done on behalf of this FIFO[T] has been gracefully
+// terminated.
+func (f *FIFO[T]) CloseDoneChannel() {
+	close(f.doneCh)
 }

@@ -140,6 +140,52 @@ func (_c *MockMap_BatchUpdate_Call[K, V]) RunAndReturn(run func(kv map[K]V) erro
 	return _c
 }
 
+// Done provides a mock function for the type MockMap
+func (_mock *MockMap[K, V]) Done() <-chan struct{} {
+	ret := _mock.Called()
+
+	if len(ret) == 0 {
+		panic("no return value specified for Done")
+	}
+
+	var r0 <-chan struct{}
+	if returnFunc, ok := ret.Get(0).(func() <-chan struct{}); ok {
+		r0 = returnFunc()
+	} else {
+		if ret.Get(0) != nil {
+			r0 = ret.Get(0).(<-chan struct{})
+		}
+	}
+	return r0
+}
+
+// MockMap_Done_Call is a *mock.Call that shadows Run/Return methods with type explicit version for method 'Done'
+type MockMap_Done_Call[K comparable, V any] struct {
+	*mock.Call
+}
+
+// Done is a helper method to define mock.On call
+func (_e *MockMap_Expecter[K, V]) Done() *MockMap_Done_Call[K, V] {
+	return &MockMap_Done_Call[K, V]{Call: _e.mock.On("Done")}
+}
+
+func (_c *MockMap_Done_Call[K, V]) Run(run func()) *MockMap_Done_Call[K, V] {
+	_c.Call.Run(func(args mock.Arguments) {
+		run()
+	})
+	return _c
+}
+
+func (_c *MockMap_Done_Call[K, V]) Return(valCh <-chan struct{}) *MockMap_Done_Call[K, V] {
+	_c.Call.Return(valCh)
+	return _c
+}
+
+func (_c *MockMap_Done_Call[K, V]) RunAndReturn(run func() <-chan struct{}) *MockMap_Done_Call[K, V] {
+	_c.Call.Return(run)
+	return _c
+}
+
 // Set provides a mock function for the type MockMap
 func (_mock *MockMap[K, V]) Set(newMap map[K]V) error {
 	ret := _mock.Called(newMap)

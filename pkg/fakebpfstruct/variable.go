@@ -20,19 +20,35 @@ import "github.com/alexandremahdhaoui/ebpfstruct"
 var _ ebpfstruct.Variable[any] = &Variable[any]{}
 
 func NewVariable[T any]() *Variable[T] {
-	return new(Variable[T])
+	return &Variable[T]{
+		V:        *new(T),
+		doneCh:   make(chan struct{}),
+		expector: expector{},
+	}
 }
 
 type Variable[T any] struct {
-	V T
+	V      T
+	doneCh chan struct{}
 	expector
 }
 
 // Set implements ebpfstruct.Variable.
-func (v *Variable[T]) Set(newVar T) error {
-	if err := v.checkExpectation("Set"); err != nil {
+func (bv *Variable[T]) Set(v T) error {
+	if err := bv.checkExpectation("Set"); err != nil {
 		return err
 	}
-	v.V = newVar
+	bv.V = v
 	return nil
+}
+
+func (bv *Variable[T]) Done() <-chan struct{} {
+	return bv.doneCh
+}
+
+// It will close the channel returned by Done(), notifying when closed
+// that the work done on behalf of this Variable[T] has been gracefully
+// terminated.
+func (bv *Variable[T]) CloseDoneChannel() {
+	close(bv.doneCh)
 }

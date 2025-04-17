@@ -25,12 +25,14 @@ func NewArray[T any]() *Array[T] {
 		b:         make([]T, 0),
 		activePtr: false,
 		expector:  expector{},
+		doneCh:    make(chan struct{}),
 	}
 }
 
 type Array[T any] struct {
 	a, b      []T
 	activePtr bool
+	doneCh    chan struct{}
 	expector
 }
 
@@ -58,6 +60,17 @@ func (a *Array[T]) GetActiveArray() []T {
 		return a.b
 	}
 	return a.a
+}
+
+func (a *Array[T]) Done() <-chan struct{} {
+	return a.doneCh
+}
+
+// It will close the channel returned by Done(), notifying when closed
+// that the work done on behalf of this Array[T] has been gracefully
+// terminated.
+func (a *Array[T]) CloseDoneChannel() {
+	close(a.doneCh)
 }
 
 // -- HELPERS

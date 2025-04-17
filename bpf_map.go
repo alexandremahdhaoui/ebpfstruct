@@ -31,6 +31,10 @@ import (
 
 // Wraps bpf objects with a convenient interface for testing.
 type Map[K comparable, V any] interface {
+	// Done returns a channel that's closed when work done on behalf of this
+	// interface has been gracefully terminated.
+	Done() <-chan struct{}
+
 	// Update in batch a set of entries in the ACTIVE map.
 	// This method does not perform a switchover.
 	// This method mutates the ACTIVE map.
@@ -97,12 +101,19 @@ type bpfMap[K comparable, V any] struct {
 	// We save a few syscalls by caching `activePointer` value instead of reading
 	// the bpf variable.
 	activePointerCache uint8
+
+	// doneCh is a channel used to notify the bpf data structures or bpf
+	// program has been closed and they can no longer be used.
+	doneCh <-chan struct{}
 }
 
+// doneCh is a channel used to notify the bpf data structures or bpf
+// program has been closed and they can no longer be used.
 func NewMap[K comparable, V any](
 	a, b *ebpf.Map,
 	aLen, bLen *ebpf.Variable,
 	activePointer *ebpf.Variable,
+	doneCh <-chan struct{},
 ) (Map[K, V], error) {
 	if util.AnyPtrIsNil(a, b, aLen, bLen, activePointer) {
 		return nil, ErrEBPFObjectsMustNotBeNil
@@ -117,7 +128,12 @@ func NewMap[K comparable, V any](
 		bLen:               bLen,
 		activePointer:      activePointer,
 		activePointerCache: 0,
+		doneCh:             doneCh,
 	}, nil
+}
+
+func (m *bpfMap[K, V]) Done() <-chan struct{} {
+	return m.doneCh
 }
 
 func (m *bpfMap[K, V]) BatchUpdate(kv map[K]V) error {

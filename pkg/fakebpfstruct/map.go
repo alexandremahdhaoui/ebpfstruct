@@ -27,12 +27,14 @@ func NewMap[K comparable, V any]() *Map[K, V] {
 		b:         make(map[K]V),
 		activePtr: false,
 		expector:  expector{},
+		doneCh:    make(chan struct{}),
 	}
 }
 
 type Map[K comparable, V any] struct {
 	a, b      map[K]V
 	activePtr bool
+	doneCh    chan struct{}
 	expector
 }
 
@@ -84,6 +86,19 @@ func (m *Map[K, V]) GetActiveMap() map[K]V {
 		return m.a
 	}
 	return m.b
+}
+
+// -- DONE
+
+func (m *Map[K, V]) Done() <-chan struct{} {
+	return m.doneCh
+}
+
+// It will close the channel returned by Done(), notifying when closed
+// that the work done on behalf of this Map[K,V] has been gracefully
+// terminated.
+func (m *Map[K, V]) CloseDoneChannel() {
+	close(m.doneCh)
 }
 
 // -- HELPERS
