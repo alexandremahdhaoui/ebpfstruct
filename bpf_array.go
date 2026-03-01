@@ -188,21 +188,39 @@ func (arr *bpfArray[T]) set(values []T) error {
 	// - https://github.com/torvalds/linux/blob/master/kernel/bpf/syscall.c#L1981
 	// - https://github.com/torvalds/linux/blob/master/kernel/bpf/arraymap.c#L888
 	if _, err := passiveMap.BatchUpdate(keys, values, nil); err != nil {
-		return err
+		if !errors.Is(err, ebpf.ErrNotSupported) {
+			return err
+		}
+		for i, k := range keys {
+			if err := passiveMap.Put(k, values[i]); err != nil {
+				return err
+			}
+		}
 	}
 
 	oldLen := arr.getActiveLenFromCache()
 	newLen := uint32(len(values))
 
-	// -- DELETE all entries in the *ebpf.Map that have index > new_length.
+	// -- ZERO OUT stale entries in the *ebpf.Map that have index >= newLen.
+	// BPF_MAP_TYPE_ARRAY does not support BatchDelete (kernel returns
+	// ENOTSUPP). Instead, overwrite stale slots with zero-valued entries.
 	if oldLen > newLen {
-		keys := make([]uint32, 0, oldLen-newLen) // TODO
+		keys := make([]uint32, 0, oldLen-newLen)
+		zeroValues := make([]T, 0, oldLen-newLen)
 		for i := newLen; i < oldLen; i++ {
 			keys = append(keys, i)
+			zeroValues = append(zeroValues, *new(T))
 		}
 
-		if _, err := passiveMap.BatchDelete(keys, nil); err != nil {
-			return err
+		if _, err := passiveMap.BatchUpdate(keys, zeroValues, nil); err != nil {
+			if !errors.Is(err, ebpf.ErrNotSupported) {
+				return err
+			}
+			for i, k := range keys {
+				if err := passiveMap.Put(k, zeroValues[i]); err != nil {
+					return err
+				}
+			}
 		}
 	}
 

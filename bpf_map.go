@@ -16,6 +16,7 @@
 package ebpfstruct
 
 import (
+	"errors"
 	"log/slog"
 	"sync"
 	"time"
@@ -146,7 +147,14 @@ func (m *bpfMap[K, V]) BatchUpdate(kv map[K]V) error {
 	}
 	active := m.getActiveMap()
 	if _, err := active.BatchUpdate(keys, values, nil); err != nil {
-		return err
+		if !errors.Is(err, ebpf.ErrNotSupported) {
+			return err
+		}
+		for j, k := range keys {
+			if err := active.Put(k, values[j]); err != nil {
+				return err
+			}
+		}
 	}
 	return nil
 }
@@ -154,7 +162,14 @@ func (m *bpfMap[K, V]) BatchUpdate(kv map[K]V) error {
 func (m *bpfMap[K, V]) BatchDelete(keys []K) error {
 	active := m.getActiveMap()
 	if _, err := active.BatchDelete(keys, nil); err != nil {
-		return err
+		if !errors.Is(err, ebpf.ErrNotSupported) {
+			return err
+		}
+		for _, k := range keys {
+			if err := active.Delete(k); err != nil && !errors.Is(err, ebpf.ErrKeyNotExist) {
+				return err
+			}
+		}
 	}
 	return nil
 }
@@ -236,7 +251,14 @@ func (m *bpfMap[K, V]) set(newMap map[K]V) error {
 	// Delete entries first to avoid exceeding max map size.
 	if len(toDelete) > 0 {
 		if _, err := passiveMap.BatchDelete(toDelete, nil); err != nil {
-			return err
+			if !errors.Is(err, ebpf.ErrNotSupported) {
+				return err
+			}
+			for _, k := range toDelete {
+				if err := passiveMap.Delete(k); err != nil && !errors.Is(err, ebpf.ErrKeyNotExist) {
+					return err
+				}
+			}
 		}
 	}
 
@@ -249,7 +271,14 @@ func (m *bpfMap[K, V]) set(newMap map[K]V) error {
 	// - https://github.com/torvalds/linux/blob/master/kernel/bpf/arraymap.c#L888
 	if len(keys) > 0 {
 		if _, err := passiveMap.BatchUpdate(keys, values, nil); err != nil {
-			return err
+			if !errors.Is(err, ebpf.ErrNotSupported) {
+				return err
+			}
+			for i, k := range keys {
+				if err := passiveMap.Put(k, values[i]); err != nil {
+					return err
+				}
+			}
 		}
 	}
 
@@ -299,6 +328,7 @@ func (m *bpfMap[K, V]) setPassiveLen(newLen uint32) error {
 		if err := m.bLen.Set(newLen); err != nil {
 			return err
 		}
+		return nil
 	}
 	if err := m.aLen.Set(newLen); err != nil {
 		return err
